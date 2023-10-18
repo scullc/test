@@ -695,10 +695,12 @@ export class ProductIntroComponent
     this.showLoader = true;
     if (
       (this.products?.packType?.toLowerCase() == 'self-purchase' &&
+      this.pdpForm.get('lengthandfit')?.value != '' &&  // validation check for lengthandfit
       this.pdpForm.get('sizes')?.value != '' &&
       !this.showMandatoryCustomizationError)
       ||
-      (this.pdpForm.get('sizes')?.value != '' &&
+      (this.pdpForm.get('lengthandfit')?.value != '' &&  // validation check for lengthandfit
+      this.pdpForm.get('sizes')?.value != '' &&
       //this.pdpForm.get('reasonForReplacement')?.value != '' && // as added conditional validation
       this.pdpForm.get('reasonForReplacement')?.valid &&
       this.pdpForm.get('reasonForReplacementComments')?.valid &&
