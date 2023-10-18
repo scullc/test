@@ -208,7 +208,7 @@ export class ProductIntroComponent
   disablePackCTA: boolean = false;
 
   mandatoryVAEmptyRule : boolean = false;
-  dimentions: any[];
+
   constructor(
     protected fb: FormBuilder,
     modalService: ModalService,
@@ -234,7 +234,6 @@ export class ProductIntroComponent
   }
 
   ngOnInit(): void {
-   
     this.store.select(fileProgress).subscribe((res: any) => {
       this.progress = res;
       this.cd.markForCheck();
@@ -445,8 +444,8 @@ export class ProductIntroComponent
 
   products: any;
 
+ 
   initProductData(res: any) {
-    this.dimentions = this.sortDimentions(res.dimentions);
     this.store.dispatch(new FetchProductSizeGuideDetails(res?.code ? res?.code : this.getProductCode));
       this.sizeGuide$.subscribe((res) => {
       if(!res?.dimensions){
@@ -458,15 +457,6 @@ export class ProductIntroComponent
       this.cd.markForCheck();
       })
     this.products = res;
-    }
-    sortDimentions(dimentions: any[]) {
-      return dimentions.sort((a, b) => {
-        if(a.code.code === 'R') return -1;
-        if(b.code.code === 'R') return 1;
-        return 0;
-      });
-    }
-    
     this.userService.get().subscribe((res: any) => {
       let unEncodedRoleName : any = this.packId;
       let enodedRoleName= encodeURIComponent(unEncodedRoleName);
@@ -592,8 +582,6 @@ export class ProductIntroComponent
     //emmit size array
     let availableSize = !this.isEmptyColorVariant() && !this.isEmptySizeVariant();
     this.sizeAvailables.emit(availableSize)
-    
-    
   }
 
   isColorSelected(color: any, i:any){
