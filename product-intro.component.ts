@@ -233,6 +233,7 @@ export class ProductIntroComponent
   }
 
   ngOnInit(): void {
+   
     this.store.select(fileProgress).subscribe((res: any) => {
       this.progress = res;
       this.cd.markForCheck();
@@ -410,6 +411,11 @@ export class ProductIntroComponent
       })
     }
     
+  }
+
+  get lengthAndFitError() {
+    const control = this.pdpForm.get('lengthandfit');
+    return control?.hasError('required') && control?.touched ? 'Please select a fitting type' : null;
   }
 
   removeQueryParamsAfterNavigation(): void {
@@ -1133,8 +1139,9 @@ export class ProductIntroComponent
     this.sizes = this.getSizes()
     this.colorBoolean = false
     this.pdpForm.controls['color'].setValue(this.selectedColorVariant.code.code);
-    this.pdpForm.controls['lengthandfit'].setValue(this.selectedFitVariant?.code?.code);
-	this.pdpService.colorImages.next(this.selectedColorVariant);
+    this.pdpForm.controls['lengthandfit'].setValue(null);
+    console.log(this.pdpForm.get('lengthandfit')?.value);
+	  this.pdpService.colorImages.next(this.selectedColorVariant);
     this.getCustomizationAvailability()
     return true
   }
