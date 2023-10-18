@@ -163,11 +163,13 @@
             <!-- sizeExchangeFlag disabled removed as per  FLYR2-7222 confirmation -->
             <mat-radio-group class="lengthGroup" id="sortoptions" aria-labelledby="sortoptions">
               <mat-radio-button class="lengthItem" *ngFor="let length of dimentions" [value]="length?.code?.code"
-                (change)="onLengthAndFitSelected($event)"
-                [checked]="length?.code?.code == selectedFitVariant?.code?.code">
-                {{ length?.code?.name }}
+                  (change)="onLengthAndFitSelected($event)">
+                  {{ length?.code?.name }}
               </mat-radio-button>
-            </mat-radio-group>
+              <mat-error *ngIf="pdpForm.controls['lengthandfit'].touched && pdpForm.controls['lengthandfit'].hasError('required')">
+                Please select a fitting type
+            </mat-error>
+          </mat-radio-group>
           </div>
         </div>
 
@@ -271,7 +273,7 @@
           <span tabindex=0 autofocus="true" class="subHeader" id="purchaseoptions" for="replacement">Select an option</span>
           <mat-radio-group class="lengthGroup" aria-labelledby="purchaseoptions">
             <ng-container *ngFor="let option of purchaseOptions; let i = index">
-              <mat-radio-button class="lengthItem" *ngIf="option?.value == true" [value]="option?.key" (change)="onPurchaseOptionSelected($event)" [checked]="option?.key == selectedPurchaseOption">
+              <mat-radio-button class="lengthItem" *ngIf="option?.value == true" [value]="option?.key" (change)="onPurchaseOptionSelected($event)">
                 <span *ngIf="option?.key == 'replacement'">Request approval for replacement</span>
                 <span *ngIf="option?.key == 'selfPurchase'">Self-funded</span>
                 <span *ngIf="option?.key == 'bulkPurchase'">Order in bulk</span>
