@@ -1,0 +1,452 @@
+<div
+  (click)="close()" (keypress)="close()"
+  class="closeButton closeCont row no-gutters" style="float: right"
+  *ngIf="quickAddtoCart || isPackPage"
+>
+  <img class="closeIcon" alt="close" />
+  <div class="closeTxt">close</div>
+</div>
+<div class="qatcPadding" *ngIf="quickAddtoCart || isPackPage">
+  <div>
+    <img tabindex=0 autofocus="true" id="myimage" alt="no image" class="qatcMainImage" onError="this.src='../../../../../assets/images/plp_no_image.png'"
+    [src]="mainImage" [alt]="altContent ?? 'No image'">
+    <!-- HI -->
+  </div>
+
+  <div class="secondColumn">
+    <div tabindex=0 autofocus="true" class="productCode">{{ getSelectedOriginalCode() == '' ? products?.code : getSelectedOriginalCode() }}</div>
+
+    <h2 tabindex=0 autofocus="true" class="qatcProductHeader">{{ products?.name | uppercase }}</h2>
+    <!--<div *ngIf="selectedSizeVariant?.price">
+      <div tabindex=0 autofocus="true" class="price">
+        {{selectedSizeVariant?.price?.formattedValue}}
+      </div>
+    </div>
+    <a class="anchorQATC" *ngIf="quickAddtoCart" target="_blank" [routerLink]="{ cxRoute: 'product', params:  getProduct(products) } | cxUrl">
+    </div>-->
+    <ng-container *ngIf="exchange != true && ((products?.packType?.toLowerCase() == 'replacement' && !isWearer) || products?.packType?.toLowerCase() == 'self-purchase' || (products?.packType?.toLowerCase() == 'compulsory' && !isWearer)  || (products?.packType?.toLowerCase() == 'new-starter' && !isWearer) || (products?.packType?.toLowerCase() == 'optional' && !isWearer) || (products?.packType?.toLowerCase() == 'new starter' && !isWearer) || products?.isDollarAllocation)">
+      <div class="gcont pdp-prodct-price" *ngIf="(selectedSizeVariant?.price && !quickAddtoCart) || defaultShowPrice">
+        <div tabindex=0 autofocus="true" class="price">
+          <!-- {{selectedSizeVariant?.price?.formattedValue != undefined ? selectedSizeVariant?.price?.formattedValue : defaultShowPrice}} -->
+          {{priceCheck()}}
+        </div>
+      </div>
+    </ng-container>
+    <a class="anchorQATC" *ngIf="quickAddtoCart" target="_blank" [routerLink]="{ cxRoute: 'product', params:  getProduct(products) } | cxUrl">
+      <span class="qatcPdpLink">VIEW PRODUCT DETAILS</span>
+    </a>
+  </div>
+</div>
+
+<div class="qatcBorder" *ngIf="quickAddtoCart || isPackPage"></div>
+<div class="boxStyle">
+  <div class="errorDisplayBox" *ngIf="showErrorDisplay">
+    <span class="errorText">
+      <img src="../../../../../assets/images/information-line-red.svg" alt="errorIcon"><span style="margin-left: 4px;">{{errorSubject}}</span>
+    </span>
+    <div class="errorSubText">
+      {{errorMessage}}
+    </div>
+  </div>
+</div>
+
+<div class="imagesPadding" [ngClass]="{'exchange-section': exchange === true}">
+  <ng-container>
+    <div *ngIf="exchange != true">
+    <div  class="d-sm-block d-none" *ngIf="!quickAddtoCart && !isPackPage" style="padding-bottom: 8px">
+      <div tabindex=0 autofocus="true" class="productCode">{{ getSelectedOriginalCode() == '' ? products?.code : getSelectedOriginalCode() }}</div>
+      <h2  tabindex=0 autofocus="true" class="productHeader">{{ products?.name | uppercase }}<span class="d-none">test</span></h2>
+    </div>
+    </div>
+    <!-- Display only when we have exchange or return the product -->
+    <div  *ngIf="exchange === true" style="padding-bottom: 8px; position: relative">
+      <div tabindex=0 autofocus="true" class="item-name product-name"
+      [ngClass]="{'exchange':  exchange === true }"
+      (click)="navigateToPDP()"
+      >{{ getSelectedOriginalCode() == '' ? getProductCode: getSelectedOriginalCode() }}</div>
+     
+      <h2  tabindex=0 autofocus="true" class="shipment-sku ">{{ products?.name}}</h2>
+      
+      <ng-container *ngIf="((products?.packType?.toLowerCase() == 'replacement' && !isWearer) || products?.packType?.toLowerCase() == 'self-purchase')">
+        <div tabindex=0 autofocus="true" class="exhcange-pdp-price" *ngIf="(selectedSizeVariant?.price && !quickAddtoCart) || defaultShowPrice">
+          <!-- {{selectedSizeVariant?.price?.formattedValue != undefined ? selectedSizeVariant?.price?.formattedValue : defaultShowPrice}} -->
+          {{priceCheck()}}
+        </div>
+      </ng-container>
+    </div>
+
+    <form *ngIf="productCode" class="prdForm" [formGroup]="pdpForm" (submit)="pdpCart()">
+     
+      <!-- commented as part of 6125 -->
+      <!-- <ng-container *ngIf="exchange === true && generatePriceMessage(selectedSizeVariant?.price?.formattedValue != undefined ? selectedSizeVariant?.price?.formattedValue : defaultShowPrice, products?.packType).trim() !== ''" >
+        <div class="priceMessage" [innerHTML]="generatePriceMessage(selectedSizeVariant?.price?.formattedValue != undefined ? selectedSizeVariant?.price?.formattedValue : defaultShowPrice, products?.packType)"></div>
+      </ng-container> -->
+      <div class="va-header-msg d-none" *ngIf="showMandatoryCustomizationError">
+        <div class="img-div">
+          <img src="../../../../../assets/images/in-page-alert.svg" alt="Alert" />
+        </div>
+        <div class="messages">
+          <div tabindex="0" autofocus="true" class="msg-head">Customisation is required on this product.</div>
+        </div>
+      </div>
+      <div class="va-header-msg customizationError" *ngIf="showMandatoryCustomizationError">
+        <div class="img-div">
+          <img src="../../../../../assets/images/error_prefix.png" alt="Error"/>
+        </div>
+        <div class="messages">
+          <div tabindex="0" autofocus="true" class="msg-head customizationErrorText">Customisation is required on this product.</div>
+        </div>
+      </div>
+      <div class="va-header-msg" *ngIf="vaEnabled">
+        <div class="img-div">
+            <img src="../../../../../assets/images/in-page-alert.svg" alt="Alert" /> 
+        </div>  
+        <div class="messages">
+            <div tabindex="0" autofocus="true" class="msg-head">This product has customisation options.</div>
+            <div tabindex="0" autofocus="true" class="msg-desc">Please note that returns and exchanges based on a change of mind
+              won’t be accepted on customised items.</div>
+        </div>
+    </div>
+    <div class="va-header-msg d-none" *ngIf="mandatoryCustomizationApplied">
+      <div class="img-div">
+        <img src="../../../../../assets/images/success_icon.png" alt="Success" />
+      </div>
+      <div class="messages d-none">
+        <div tabindex="0" autofocus="true" class="msg-head">Required customisation has been applied.</div>
+      </div>
+    </div>
+      <div *ngFor="let level of itemlevels">
+        <div *ngIf="level == variantType.Color">
+          <div class="gcont" *ngIf="colors != null">
+            <div tabindex=0 autofocus="true" class="subHeader">
+              Colour:  <span class="selectedColor">{{ selectedColorVariant?.code?.name }}</span>
+            </div>
+            <div class="d-flex">
+              <div class="row no-gutters"  *ngFor="let color of colors;let i = index">
+                
+                <app-pdp-color 
+               
+                  tabindex=0 
+                  autofocus="true" 
+                  [attr.aria-label]="color.name" 
+                  class="itemcolor" 
+                  (click)="onColorSelected(color)"
+                  [color]="color" 
+                  [selected]="isColorSelected(color, i)">
+                </app-pdp-color>
+              </div>
+            </div>
+            <!-- <div
+              *ngIf="
+                showError &&
+                pdpForm.invalid &&
+                pdpForm.controls['color'].errors &&
+                pdpForm.controls['color'].errors.required
+              "
+            >
+              <mat-error
+                style="
+                  padding-bottom: 5%;
+                  font-weight: 400;
+                  font-size: 14px;
+                  line-height: 20px;
+                "
+                >Please select from available colors</mat-error
+              >
+            </div> -->
+          </div>
+        </div>
+
+        <div *ngIf="level == variantType.Fit && !isEmptyFitVariant()">
+          <div class="gcont" *ngIf="dimentions != null">
+            <div class="subHeader">Length / Fit</div>
+            <!-- sizeExchangeFlag disabled removed as per  FLYR2-7222 confirmation -->
+            <mat-radio-group class="lengthGroup" id="sortoptions" aria-labelledby="sortoptions">
+              <mat-radio-button class="lengthItem" *ngFor="let length of dimentions" [value]="length?.code?.code"
+                (change)="onLengthAndFitSelected($event)"
+                [checked]="length?.code?.code == selectedFitVariant?.code?.code">
+                {{ length?.code?.name }}
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+        </div>
+
+        <div *ngIf="level == variantType.Size">
+          <div class="gcont row no-gutters" style="display: flex; flex-direction: column; gap: 8px"
+            *ngIf="sizes != null">
+            <!-- [ngStyle]="{'padding-bottom': pdpForm.controls['sizes'].valid ? '10%' : '10%'}"  -->
+            <div tabindex=0 autofocus="true" class="subHeader">Select your size</div>
+            <div  class="row no-gutters" style="display: flex; flex-direction: row">
+              <div *ngFor="let size of sizes" (click)="onSizeSelected(size)">
+                <app-pdp-size 
+                [size]="size" [custom]="customClicked" [selected]="selectedSize == size.name"
+                [enabled]="isSizePresent(size)" [inlineError]="showError &&
+                pdpForm.invalid &&
+                pdpForm.controls['sizes'].errors &&
+                pdpForm.controls['sizes'].errors.required" (onCancel)="onCancelCustom($event)" (openCustomModal)="checkCustomModal($event)"> 
+              </app-pdp-size>
+              </div>
+            </div>
+            <div tabindex=0 autofocus="true" *ngIf="stockMessage.length>0"><span class="livestock" *ngIf="showLevel">{{stockLevelNumber + ' '}}</span><span
+              class="livestockMessage">{{stockMessage}}</span></div>
+            <div tabindex=0 autofocus="true" *ngIf="
+                showError &&
+                pdpForm.invalid &&
+                pdpForm.controls['sizes'].errors &&
+                pdpForm.controls['sizes'].errors.required
+              ">
+              <mat-error style="
+                  padding-bottom: 5%;
+                  font-weight: 400;
+                  font-size: 14px;
+                  line-height: 20px;
+                ">Please select from available sizes</mat-error>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Customise your product -->
+      <div class="gcont pb-8 mb-20" *ngIf="vaEnabled">
+        <div  class="row customise-product-outer" [ngClass]="{'errorBox': showMandatoryCustomizationError === true}">
+          <div tabindex=0 autofocus="true" class="col-8 col-md-8 customise-product-label" *ngIf="mandatoryVAEmptyRule == false">{{ !selectedVA ? 'Customisation ' + (mandatoryVA ? 'required' : 'options') :
+            'Customisations' }}</div>
+          <div tabindex=0 autofocus="true" class="col-8 col-md-8 customise-product-label" *ngIf="mandatoryVAEmptyRule == true">Customisation </div>
+          
+          <div class="col-4 col-md-4 customise-product-cta" *ngIf="mandatoryVAEmptyRule == false">
+            <span tabindex=0 autofocus="true" (click)="customiseProduct()" *ngIf="!selectedVA">{{mandatoryVA ? 'add' : 'view'}}</span>
+            <!-- <span tabindex=0 autofocus="true" (click)="customiseProduct()" *ngIf="selectedVA">edit</span> -->
+            <span tabindex=0 autofocus="true" (click)="deleteCustomiseProduct()" *ngIf="selectedVA">delete</span>
+          </div>
+          <div class="col-12 col-md-12 selectedva" *ngIf="selectedVA">
+            <!-- <div tabindex=0 autofocus="true" class="vaHeader">{{selectedVA}}</div> -->
+            <!-- In case product prices are to be shown -->
+            <div class="vaList" *ngIf="(selectedSizeVariant?.price?.formattedValue != undefined ? selectedSizeVariant?.price?.formattedValue : defaultShowPrice) != priceCheck()">
+              <span class="vaHeader">{{ products?.name}}</span>
+              <span class="vaHeader p-min-width" *ngIf="
+                (products?.packType?.toLowerCase() == 'replacement' && !isWearer) || 
+                (products?.packType?.toLowerCase() == 'self-purchase') || 
+                (products?.packType?.toLowerCase() == 'compulsory' && !isWearer)  || 
+                (products?.packType?.toLowerCase() == 'new-starter' && !isWearer) || 
+                (products?.packType?.toLowerCase() == 'optional' && !isWearer) || 
+                (products?.packType?.toLowerCase() == 'new starter' && !isWearer) || 
+                 products?.isDollarAllocation
+              ">  
+                {{selectedSizeVariant?.price?.formattedValue != undefined ? selectedSizeVariant?.price?.formattedValue : defaultShowPrice}}
+              </span>
+            </div>
+
+          <div class="row no-gutters mb-20" *ngFor="let selectedVA of selectedVaOption?.valueAdd">
+            <div class="col-10 vaHeader" tabindex="0" autofocus="true">{{selectedVA?.name}}</div>
+            <div class="col-2 vaHeader" style="text-align:right" tabindex="0" autofocus="true" *ngIf="selectedVA?.price>=0 &&
+            (products?.packType?.toLowerCase() == 'replacement' && !isWearer) || 
+            (products?.packType?.toLowerCase() == 'self-purchase') || 
+            (products?.packType?.toLowerCase() == 'compulsory' && !isWearer)  || 
+            (products?.packType?.toLowerCase() == 'new-starter' && !isWearer) || 
+            (products?.packType?.toLowerCase() == 'optional' && !isWearer) || 
+            (products?.packType?.toLowerCase() == 'new starter' && !isWearer) ||
+             products?.isDollarAllocation
+          ">${{selectedVA?.price}}</div>
+            <div class="col-12 vaHeader gray-text" *ngFor="let prompt of selectedVA?.prompts" tabindex="0" autofocus="true"><span *ngIf="prompt?.prompt1">{{prompt?.prompt1}} : {{prompt?.userEnteredValue}}</span></div>
+          </div>
+          </div>
+          <div>
+          </div>
+        </div>
+        <div *ngIf="showMandatoryCustomizationError">
+          <mat-error style="
+              padding-bottom: 5%;
+              font-weight: 400;
+              font-size: 14px;
+              line-height: 20px;
+            ">This information is required</mat-error></div>
+      </div>
+      <!-- //FLYR2-4292 ends -->
+      <div  class="gcont" *ngIf = "isSizeguideAvailable">
+        <div *ngIf = "isSizeguideAvailable" tabindex=0 autofocus="true" class="sizeGuide-header"><span (click)="event()">size guide</span></div>
+      </div>
+      
+      <!-- Purchase Options -->
+      <ng-container *ngIf="products?.packType?.toLowerCase() != 'self-purchase'">
+        <div class="gcont" *ngIf="purchaseOptionsCount > 1 && exchange === false">
+          <span tabindex=0 autofocus="true" class="subHeader" id="purchaseoptions" for="replacement">Select an option</span>
+          <mat-radio-group class="lengthGroup" aria-labelledby="purchaseoptions">
+            <ng-container *ngFor="let option of purchaseOptions; let i = index">
+              <mat-radio-button class="lengthItem" *ngIf="option?.value == true" [value]="option?.key" (change)="onPurchaseOptionSelected($event)" [checked]="option?.key == selectedPurchaseOption">
+                <span *ngIf="option?.key == 'replacement'">Request approval for replacement</span>
+                <span *ngIf="option?.key == 'selfPurchase'">Self-funded</span>
+                <span *ngIf="option?.key == 'bulkPurchase'">Order in bulk</span>
+              </mat-radio-button>
+            </ng-container>
+            
+          </mat-radio-group>
+        </div>
+      </ng-container>
+      <!-- Purchase Options -->
+
+      <ng-container *ngIf="products?.packType?.toLowerCase() != 'self-purchase'">
+        <div [ngClass]="{'d-none': exchange === true}" *ngIf="selectedPurchaseOption == 'replacement' && !isPackPage">
+          <div class="gcont">
+            <label tabindex=0 autofocus="true" class="subHeader withText" for="replacement">Reason for purchase</label>
+            <span tabindex=0 autofocus="true" class="subHeader-text">This will be fully funded by your organisation.</span>
+            <mat-select class="form-control" [ngClass]="{
+                'is-invalid':
+                  showError &&
+                  pdpForm.invalid &&
+                  pdpForm.controls['reasonForReplacement'].errors &&
+                  pdpForm.controls['reasonForReplacement'].errors.required
+              }" style="border-radius: 0px; padding-left: 16px;" formControlName="reasonForReplacement" placeholder="Select an option" (selectionChange)="onReasonForReplacementChange($event)">
+              <mat-option value="Change of circumstance">Change of circumstances</mat-option>
+              <mat-option value="Incident"> Incident </mat-option>
+              <mat-option value="Fair Wear and Tear">Fair Wear & Tear</mat-option>
+              <mat-option value="General purchase">General purchase</mat-option>
+            </mat-select>
+            <div *ngIf="
+                showError &&
+                pdpForm.invalid &&
+                pdpForm.controls['reasonForReplacement'].errors &&
+                pdpForm.controls['reasonForReplacement'].errors.required
+              ">
+              <mat-error style="
+                  padding-bottom: 5%;
+                  font-weight: 400;
+                  font-size: 14px;
+                  line-height: 20px;
+                ">This information is required</mat-error>
+            </div>
+          </div>
+          <div class="gcont" *ngIf="showReasonForReplacementComments">
+            <label tabindex=0 autofocus="true" class="subHeader pt-0 h-25" for="reasonForReplacementComments">
+              <span *ngIf="reasonForReplacementValue == 'General purchase'; then optionalComments else mandatoryComments"></span>
+              <ng-template #optionalComments>Additional comments (Optional)</ng-template>
+              <ng-template #mandatoryComments>Please specify</ng-template>
+            </label>
+            <textarea id="reasonForReplacementComments" formControlName="reasonForReplacementComments" class="form-control" maxlength="256"
+              style="resize: none; border-radius: 0px;"></textarea>
+            <div *ngIf="
+              showError &&
+              pdpForm.invalid &&
+              pdpForm.controls['reasonForReplacementComments'].errors &&
+              pdpForm.controls['reasonForReplacementComments'].errors.required
+            ">
+              <mat-error style="
+                  padding-bottom: 5%;
+                  font-weight: 400;
+                  font-size: 14px;
+                  line-height: 20px;
+                ">This information is required</mat-error>
+            </div>  
+          </div>
+
+          <div *ngIf="showFileUploader" class="pb-8">
+            <div class="form-group pb-8">
+              <!--<app-file-upload></app-file-upload>-->
+              <span tabindex=0 autofocus="true" class="subHeader" for="replacement">Supporting evidence</span>
+              <p class="subdesc-img" tabindex="0"
+              autofocus="true">Provide images to support your request.</p>
+            
+    
+              <app-wwg-file-upload
+              #fileUpload
+                id="fileUpload"
+                [multiple]="true"
+                [progress]="progress"
+                [accept]="accept"
+                formControlName="attachments"
+              ></app-wwg-file-upload>
+    
+              <div
+                *ngIf="
+                  pdpForm.invalid &&
+                  pdpForm.controls['attachments'].errors &&
+                  pdpForm.controls['attachments'].errors.fileSizeExceeds
+                "
+                class="fileError"
+              >
+                <img
+                  src="../../../../../assets/images/error_prefix.png"
+                  width="16px"
+                  height="16px"
+                  alt="error-icon"
+                />
+                <mat-error
+                  >Your file could not be uploaded as it exceeds the maximum
+                  limit of 30MB.</mat-error
+                >
+              </div>
+    
+              <div
+                *ngIf="
+                  pdpForm.invalid &&
+                  pdpForm.controls['attachments'].errors &&
+                  pdpForm.controls['attachments'].errors.invalidFileType
+                "
+                class="fileError"
+              >
+                <img
+                  src="../../../../../assets/images/error_prefix.png"
+                  width="16px"
+                  height="16px"
+                  alt="error-icon"
+                />
+                <mat-error
+                  >Your file could not be uploaded as the file type is not
+                  supported.</mat-error
+                >
+              </div>
+            </div>
+            <div class="gcont pb-16" *ngIf="showFileUploader">
+              <label tabindex=0 autofocus="true" class="subHeader" for="additionalComments">Additional comments (Optional)</label>
+              <textarea id="additionalComments" formControlName="additionalComments" class="form-control" maxlength="256"
+                style="resize: none; border-radius: 0px;"></textarea>
+            </div>
+          </div> 
+
+        </div>
+      </ng-container>
+      
+
+      <div [ngClass]="{'d-none': exchange === true}" class="gcont" *ngIf="selectedPurchaseOption == 'selfPurchase'">
+        <label tabindex=0 autofocus="true" class="subHeader" for="reasonForSelfPurchase">Reason for self purchase (optional)</label>
+        <textarea id="reasonForSelfPurchase" formControlName="reasonForSelfPurchase" class="form-control" maxlength="256"
+          style="resize: none; border-radius: 0px;"></textarea>
+      </div>
+
+      <div [ngClass]="{'d-none': exchange === true}" class="row no-gutters" *ngIf="!isPackPage && isPackPage!=undefined">
+        <label tabindex=0 autofocus="true"  class="subHeader" style="padding: 0">Quantity</label>
+      </div>
+      <div [ngClass]="{'d-none': exchange === true}" class="row no-gutters" style="justify-content: space-between">
+        <!-- class="col-xs-12 col-sm-12 col-md-4 col-lg-4" -->
+        <div class="itemcounter" *ngIf="!isPackPage && isPackPage!=undefined">
+          <cx-item-counter [control]="pdpForm.get('quantity')" [max]="9999">
+          </cx-item-counter>
+        </div>
+        <!-- <div class="col-xs-12 col-sm-12 col-md-2 col-lg-2" style="padding-top: 2%;">
+                    In Stock
+                </div> -->
+        <!-- class="col-xs-12 col-sm-12 col-md-6 col-lg-6" -->
+        <!-- <div > -->
+        <button class="btn btn-primary btn-block addToCart" type="submit"
+          [disabled]="quantity <= 0 || quantity > maxQuantity" *ngIf="!isPackPage && isPackPage!=undefined" id="addToCartBtn">
+          <span *ngIf="!showLoader">Add To Cart</span>
+          <span *ngIf="showLoader" class="loader"></span>
+        </button>
+
+        <button class="btn btn-primary btn-block addToCart" *ngIf="isPackPage" (click)="addToBundle()" id="addToCartBtn"
+          [disabled]="quantity <= 0 || quantity > maxQuantity || showLoader || disablePackCTA">
+          <span *ngIf="!showLoader">SELECT ITEM</span>
+          <span *ngIf="showLoader" class="loader"></span>
+        </button>
+        <!-- </div> -->
+        <!-- <cx-add-to-cart class="addToCart" style="padding-inline-start: 20px;"></cx-add-to-cart> -->
+      </div>
+    </form>
+  </ng-container>
+
+</div>
+<div *ngIf="quickAddtoCart || isPackPage">
+    <div class="productTextStyle">Product Details</div>
+    <div class="qatcBorder"></div>
+    <app-product-images [quickAddtoCart]="true"></app-product-images>
+    <app-product-tabs [quickAddtoCart]="true"></app-product-tabs>
+  </div>
+<!-- <app-wwg-toast #toast></app-wwg-toast> -->
