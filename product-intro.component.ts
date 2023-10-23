@@ -444,7 +444,6 @@ export class ProductIntroComponent
 
   products: any;
 
- 
   initProductData(res: any) {
     this.store.dispatch(new FetchProductSizeGuideDetails(res?.code ? res?.code : this.getProductCode));
       this.sizeGuide$.subscribe((res) => {
@@ -582,6 +581,8 @@ export class ProductIntroComponent
     //emmit size array
     let availableSize = !this.isEmptyColorVariant() && !this.isEmptySizeVariant();
     this.sizeAvailables.emit(availableSize)
+    
+    
   }
 
   isColorSelected(color: any, i:any){
@@ -700,12 +701,12 @@ export class ProductIntroComponent
     this.showLoader = true;
     if (
       (this.products?.packType?.toLowerCase() == 'self-purchase' &&
-      this.pdpForm.get('lengthandfit')?.value != '' &&  // validation check for lengthandfit
-      this.pdpForm.get('sizes')?.value != '' &&
+      this.pdpForm.get('lengthandfit')?.valid &&  
+      this.pdpForm.get('sizes')?.valid && 
       !this.showMandatoryCustomizationError)
       ||
-      (this.pdpForm.get('lengthandfit')?.value != '' &&  // validation check for lengthandfit
-      this.pdpForm.get('sizes')?.value != '' &&
+      (this.pdpForm.get('lengthandfit')?.valid &&  
+      this.pdpForm.get('sizes')?.valid &&  
       //this.pdpForm.get('reasonForReplacement')?.value != '' && // as added conditional validation
       this.pdpForm.get('reasonForReplacement')?.valid &&
       this.pdpForm.get('reasonForReplacementComments')?.valid &&
@@ -1139,7 +1140,6 @@ export class ProductIntroComponent
     this.colorBoolean = false
     this.pdpForm.controls['color'].setValue(this.selectedColorVariant.code.code);
     this.pdpForm.controls['lengthandfit'].setValue(null);
-    console.log(this.pdpForm.get('lengthandfit')?.value);
 	  this.pdpService.colorImages.next(this.selectedColorVariant);
     this.getCustomizationAvailability()
     return true
