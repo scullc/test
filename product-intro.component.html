@@ -161,15 +161,12 @@
           <div class="gcont" *ngIf="dimentions != null">
             <div class="subHeader">Length / Fit</div>
             <!-- sizeExchangeFlag disabled removed as per  FLYR2-7222 confirmation -->
-            <mat-radio-group class="lengthGroup" id="sortoptions" aria-labelledby="sortoptions">
+          <mat-radio-group class="lengthGroup" id="sortoptions" aria-labelledby="sortoptions" formControlName="lengthandfit">
               <mat-radio-button class="lengthItem" *ngFor="let length of dimentions" [value]="length?.code?.code"
                   (change)="onLengthAndFitSelected($event)">
                   {{ length?.code?.name }}
               </mat-radio-button>
-              <mat-error *ngIf="pdpForm.controls['lengthandfit'].touched && pdpForm.controls['lengthandfit'].hasError('required')">
-                Please select a fitting type
-            </mat-error>
-          </mat-radio-group>
+            </mat-radio-group>
           </div>
         </div>
 
