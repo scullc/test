@@ -208,7 +208,6 @@ export class ProductIntroComponent
   disablePackCTA: boolean = false;
 
   mandatoryVAEmptyRule : boolean = false;
-
   constructor(
     protected fb: FormBuilder,
     modalService: ModalService,
