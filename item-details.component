@@ -1,0 +1,876 @@
+import { Component, OnInit, Output, EventEmitter, Input, ChangeDetectorRef, OnDestroy, ViewChild } from '@angular/core';
+import { FormControl, FormGroup, Validators, ValidatorFn, AbstractControl,ValidationErrors} from '@angular/forms';
+import { appProperties } from 'src/app/shared/base_en_config';
+import { Store } from 'src/app/_models/store';
+import { MediaService } from '@spartacus/storefront';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FetchRequestTypesOptions, LoadRequestTypesOptions, GlobalFailureToastMsgAction,
+  FetchExchangeProductAction, FetchReturnExchangePriceAction } from 'src/app/_ngrx/actions/global.actions';
+import { requestTypesOptionsData,exchangeProductData } from 'src/app/_ngrx/selectors/global.selectors';
+import { errMsg } from 'src/app/shared/base_en_config';
+import { ProductIntroComponent } from '../../../product-details/product-intro/product-intro.component';
+import { Dropdown } from 'primeng/dropdown';
+@Component({
+  selector: 'app-item-details',
+  templateUrl: './item-details.component.html',
+  styleUrls: ['./item-details.component.scss']
+})
+export class ItemDetailsComponent implements OnInit {
+  @ViewChild('requestTypeErr') dropRequestType: Dropdown;
+  @ViewChild('reasonForRequestErr') dropReasonForRequest: Dropdown;
+  @ViewChild('itemConditionErr') dropItemCondition: Dropdown;
+  @ViewChild('productIntroComponent') productIntroComponent:ProductIntroComponent;
+  @Input() goToSelection: boolean = false;
+  @Input() errorIds: any[] = [];
+  removeSelectionIDs: any[] = [];
+  showHideDetail : any = []
+  showData: any = [];
+
+  @Input() item: any;
+  @Input() product: any;
+  @Input() itemsDetailsForm: FormGroup;
+  @Input() isWearer: boolean;
+  itemFormId: string;
+  currentSelection: string;
+  productData: any;
+  baseProduct:any;
+  appProperties: any = appProperties;
+  progress = 0;
+  itemSub: any;
+  selectedSearchterm:any;
+  searchTerm:any;
+  // selectText:any="";
+  accept = [
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/tiff',
+    'image/gif',
+    'image/heic',
+  ];
+  @Output() nextStep = new EventEmitter<any>();
+  @Output() prevStep = new EventEmitter<any>();
+
+  itemConditionReturn:any;
+  reasonForRequestReturn :any;
+  itemConditionExchange:any;
+  reasonForRequestExchange:any;
+
+  requestType:any = []
+  
+  selectedRequestType = '';
+
+  reasonForRequest = [];
+  selectedReasonForRequest = '';
+
+  itemCondition = []
+  selecteditemCondition = '';
+
+  showError: boolean = false;
+
+  showReasonForRequestOther: boolean = false;
+
+  showOptions: boolean = false
+  showExchangeSection: boolean = false
+
+  pageHeading = '';
+  exchangeNotAllowedError = false;
+  globalFileErrorMessage = false;
+
+  localForm = new FormGroup({})
+
+  itemForm: FormGroup;
+  exchangeProductSub:any;
+  exchangeProduct:any;
+  selectedProduct:any;
+  showProductDetails:any;
+  showHideProductDetail: any = [];
+  counter = 1;
+  payload: any = {
+    searchText: '',
+    pageSize: 0,
+    selectedCode: ""
+  };
+  showcontent:boolean=false;
+  selectedExchageProduct:any;
+  
+  exchangeSizeShowError: boolean = false;
+  exchangeSizeCheckResp: boolean = false;
+
+  totalItemsLength: number;
+  currentActiveItem: number;
+  itemDetailsData: any;
+  orderNumber: any;
+  returnIteminlineError= false;
+  returnIteminlineFileError= false;
+  reasonForRequestValue: any;
+
+  totalPrice: any;
+  sizeOnlyFlag: boolean;
+  isItemVAOptional: boolean = false ;
+  orderId : any;
+  isExchangeComponentFileRequired : boolean = false;
+  constructor(
+    private cd: ChangeDetectorRef,
+    private mediaService: MediaService,
+    private store: Store,
+    private route: ActivatedRoute,
+    private router: Router
+  ) { }
+  
+  multiExchangeProducts : boolean = false;
+  ngOnInit(): void { 
+
+    
+    this.totalItemsLength = Object.keys(this.product[2]?.subStep).length;
+    this.route.url.subscribe((params: any) => {
+      this.orderId = params?.[1].path
+    })
+    this.exchangeProductSub = this.store.select(exchangeProductData).subscribe((res) => {    
+      if (Object.keys(res).length>0) {
+        this.exchangeProduct = res;
+        this.sizeOnlyFlag = this.exchangeProduct.styles[0]?.sizeOnly ? this.exchangeProduct.styles[0]?.sizeOnly : false;
+        if(res && res.selectedRole) {
+          localStorage.setItem('packId', res.selectedRole);
+        }
+        //added this to identify if PDP call is made from order journey or RE journey
+        localStorage.setItem('inExchangeStep', 'true');
+        localStorage.setItem('REOrderId',this.orderId);
+        
+        if(this.exchangeProduct?.styles?.length == 1) {
+          // commented as when get only 1 product and after selecting exchangeable product if go to next step and come back to step 2 it was clearing selection which should not happen
+          // this.resetItemFormSkus();
+          this.selectedProduct = this.exchangeProduct.styles[0]?.styleId;
+          this.itemForm.controls['returnExchangeEntries'].setValue(this.selectedProduct);
+        }
+        this.multiExchangeProducts = false;
+        if(this.exchangeProduct?.styles?.length > 1) {
+          this.multiExchangeProducts = true;
+        }
+        this.cd.markForCheck();
+      } else if(res.errors){
+        this.store.dispatch(new GlobalFailureToastMsgAction(errMsg.er02));
+      }
+    });
+
+    this.itemSub = this.store.select(requestTypesOptionsData).subscribe((res) => {  
+      this.requestType  = [];
+      if (Object.keys(res).length>0) {
+        for(let index in res?.requestItems){
+          if(res?.requestItems[index]?.requestType.toLowerCase() == "return"){
+            this.itemConditionReturn = res?.requestItems[index]?.itemCondition?.map((element: any) => { return { name: element, } });
+            this.reasonForRequestReturn = res?.requestItems[index]?.reasons?.map((element: any) => { return { name: element, } });
+            this.requestType.push({ 'name' : 'Return' })
+          }
+          if(res?.requestItems[index]?.requestType.toLowerCase() == "exchange"){
+            this.itemConditionExchange = res?.requestItems[index]?.itemCondition?.map((element: any) => { return { name: element, } });
+            this.reasonForRequestExchange = res?.requestItems[index]?.reasons?.map((element: any) => { return { name: element, } });
+            this.requestType.push({ 'name' : 'Exchange' })
+          }
+        }
+        // As per FLYR2-7579 removing all handle in BE this.checkRequestRule();
+        this.setFormControl();
+        this.cd.markForCheck();
+      } else if(res.errors){
+        this.store.dispatch(new GlobalFailureToastMsgAction(errMsg.er02));
+      }
+    });
+
+    //console.log("this.errorIds", this.errorIds, this.item)
+    if(this.goToSelection) {
+      if(this.errorIds.length > 0) {
+        for (let id of this.errorIds){
+          let step = 2;
+          let stepID = step + '.' + id;
+          this.removeSelectionIDs.push(stepID)
+        }
+      }
+      this.clearAndGoToSelection();
+    }
+    //console.log("this.removeSelectionIDs", this.removeSelectionIDs)
+  }
+
+  clearAndGoToSelection(){
+    if(this.removeSelectionIDs.includes(this.item)) {
+      // added timeout to see scroll effect 
+      setTimeout(function(){
+        document.getElementById("selectItemDiv")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+          inline: "nearest"
+        });
+      },1000);
+
+      // Reset the Value when user clicking on make your selection error on Review Request Step
+      this.itemForm.controls['color'].reset();
+      this.itemForm.controls['dimention'].reset();
+      this.itemForm.controls['size'].reset();
+      this.itemForm.controls['returnExchangeEntries'].reset();
+
+      this.addSkuValidation();
+      this.itemForm?.get('returnExchangeEntries')?.setValidators([Validators.required]);
+    }
+  }
+
+  ngOnChanges(): void {
+    if(this.item) {
+      if(this.currentSelection != this.item) {
+        this.counter = 1;
+        this.currentSelection = this.item;
+        this.getItem(this.currentSelection);
+        this.setFormControl();
+        this.updateRequestTypes();
+      }
+    }
+    this.currentActiveItem = this.item.slice(-1);
+    this.clearAndGoToSelection();
+  }
+
+  onStateChange(event: any) {
+    if((this.itemForm.controls['requestType'].value?.name?.toLowerCase() == 'return') && (event?.value?.name?.toLowerCase() != 'unworn' && (this.itemForm.controls['reasonForRequest']
+    .value?.name?.toLowerCase() == 'change of mind' || this.itemForm.controls['reasonForRequest']
+    .value?.name?.toLowerCase() == 'incorrect item - not what i ordered')) && (this.productData?.packType?.toLowerCase() == 'optional' || this.productData?.packType?.toLowerCase() == 'replacement' || this.productData?.packType?.toLowerCase() == 'self-purchase' || this.productData?.packType?.toLowerCase() == 'self purchase'))
+    {
+      this.returnIteminlineError= true;
+    }
+    else{
+      this.returnIteminlineError= false;
+    }
+    this.reasonForRequestValue = this.itemForm.controls['reasonForRequest'].value?.name;
+  }
+  onRequestChange(event:any){
+    let itemFromRawValue= this.itemForm.getRawValue();
+    if((itemFromRawValue?.attachments?.length == 0 || itemFromRawValue?.attachments == '') && (this.itemForm.controls['requestType'].value?.name?.toLowerCase() == 'return') && (event?.value?.name?.toLowerCase() == 'incorrect item - embroidery incorrect' || event?.value?.name?.toLowerCase() == 'faulty - manufacturing/product fault' || event?.value?.name?.toLowerCase() == 'faulty - damaged in transit' || event?.value?.name?.toLowerCase() == 'faulty - soiled/marked when received') && (this.productData?.packType?.toLowerCase() == 'optional' || this.productData?.packType?.toLowerCase() == 'replacement' || this.productData?.packType?.toLowerCase() == 'self-purchase' || this.productData?.packType?.toLowerCase() == 'self purchase'))
+    {
+      this.returnIteminlineFileError= true;
+      this.isExchangeComponentFileRequired= true;
+    }
+    else{
+      this.returnIteminlineFileError= false;
+      this.isExchangeComponentFileRequired= false;
+    }
+    this.cd.markForCheck();
+  }
+ 
+  // As per FLYR2-7579 removing all conditions handle in BE
+ 
+  updateRequestTypes(){
+    this.route.url.subscribe(res => {
+      if (res?.length > 1) {
+        const payload = {
+          orderId: res?.[1].path ,
+          productCode : this.productData?.skuNumber ,
+          entryNumber : this.productData?.entryNumber
+        }
+        this.orderNumber = res?.[1].path;
+        
+        this.store.dispatch(
+          new FetchRequestTypesOptions(payload)
+        );
+      }
+      this.cd.markForCheck();
+    });
+  }
+
+  // conditional update  dropdowns
+  updateDropdowns(event:any){
+    // set default
+    this.exchangeSizeShowError = false;
+    this.exchangeSizeCheckResp = false;
+
+    this.selectedRequestType = event.value?.name 
+    this.showOptions = true;
+    if(event.value?.name.toLowerCase() =='return'){
+      this.itemCondition = this.itemConditionReturn;
+      this.reasonForRequest = this.reasonForRequestReturn;
+    }
+    if(event.value?.name.toLowerCase() =='exchange'){
+      this.itemCondition = this.itemConditionExchange;
+      this.reasonForRequest = this.reasonForRequestExchange;
+    }
+    // reset other options
+    this.itemForm.controls['reasonForRequest'].reset();
+    this.itemForm.controls['itemCondition'].reset();
+
+    this.showExchangeSection = false;
+    this.showError = false;
+
+    // this.setFormControl();
+  }
+
+  showOtherField(event:any){
+    if(event.value?.name.toLowerCase() =='other'){
+      this.itemForm.controls['reasonForRequest'].setValue('');
+      this.showReasonForRequestOther = true;
+    } else{
+      this.showReasonForRequestOther = false;
+    }
+  }
+
+  // get data from parent comp
+  getItem(currentSelection:any){
+    let itemNum = currentSelection.split('.');
+    let products = this.product[2]?.subStep;
+    this.productData = products[itemNum[1]]?.product;
+    this.baseProduct = this.productData?.product?.baseProduct?.split('-')[0]
+    this.itemFormId = 'item' + itemNum[1];
+    this.pageHeading = 'Item ' + itemNum[1];
+    this.totalPrice = (this.productData?.quantity * this.productData?.basePrice?.value).toFixed(2);   
+    // FLYR2-725 : AC #1 changes set request type only Return
+    this.isItemVAOptional = false;
+    if(this.productData?.selectedValueAdd != undefined){
+      for(let selectedValueAddData of this.productData?.selectedValueAdd){
+        if(selectedValueAddData?.mandatory == false && selectedValueAddData?.mandatory != undefined)
+          this.isItemVAOptional = true;
+      }
+    }
+  }
+
+  // set parent form data to itemForm
+  setFormControl(){
+    
+    this.showError = false;
+    this.showOptions = false;
+    if(this.itemsDetailsForm.controls[this.itemFormId] != undefined){
+      this.itemForm  = this.itemsDetailsForm.controls[this.itemFormId] as FormGroup;
+    
+      if(this.itemForm != undefined){
+      //  console.log('1' + this.itemsDetailsForm.getRawValue());
+        if(this.itemForm.controls['requestType']?.value?.name?.toLowerCase() =='return'){
+          //Clear Validators when dropdown has RETURN value
+          this.clearSkuValidation();
+          this.itemForm?.get('returnExchangeEntries')?.clearValidators();
+          this.itemForm?.get('returnExchangeEntries')?.updateValueAndValidity();
+          this.itemCondition = this.itemConditionReturn;
+          this.reasonForRequest = this.reasonForRequestReturn;
+          this.showExchangeSection = false
+          this.showOptions = true;
+        }
+      
+        if(this.itemForm.controls['requestType']?.value?.name?.toLowerCase() =='exchange'){
+          //Set conditional Validators when dropdown has EXCHNAGE value
+          if(this.itemForm?.controls['returnExchangeEntries']?.value == "" || this.itemForm?.controls['returnExchangeEntries']?.value == null ||
+          this.itemForm?.controls['size']?.value == "" || this.itemForm?.controls['size']?.value == null) {
+            this.addSkuValidation();
+            this.itemForm?.get('returnExchangeEntries')?.setValidators([Validators.required]);
+          } else {
+            this.clearSkuValidation();
+            this.itemForm?.get('returnExchangeEntries')?.clearValidators();
+            this.itemForm?.get('returnExchangeEntries')?.updateValueAndValidity();
+          }
+          // this.addSkuValidation();
+          // this.itemForm?.get('returnExchangeEntries')?.setValidators([Validators.required]);
+          this.itemCondition = this.itemConditionExchange;
+          this.reasonForRequest = this.reasonForRequestExchange;
+          this.showExchange();
+          this.showOptions = true;
+        }
+       
+        this.selectedProduct = this.itemForm.controls['returnExchangeEntries'].value;
+        
+      }
+    } else {
+      this.initializeFormById();
+    }      
+  }
+
+  addSkuValidation(){
+    this.itemForm?.get('color')?.setValidators([Validators.required]);
+    this.itemForm?.get('dimention')?.setValidators([Validators.required]);
+    this.itemForm?.get('size')?.setValidators([Validators.required]);
+    this.itemForm?.get('color')?.updateValueAndValidity();
+    this.itemForm?.get('dimention')?.updateValueAndValidity();
+    this.itemForm?.get('size')?.updateValueAndValidity();
+  }
+
+  clearSkuValidation(){
+    this.itemForm?.get('color')?.clearValidators();
+    this.itemForm?.get('dimention')?.clearValidators();
+    this.itemForm?.get('size')?.clearValidators();
+    this.itemForm?.get('color')?.updateValueAndValidity();
+    this.itemForm?.get('dimention')?.updateValueAndValidity();
+    this.itemForm?.get('size')?.updateValueAndValidity();
+  }
+
+  initializeFormById(){
+    this.itemForm = new FormGroup({    
+      requestType: new FormControl('', [Validators.required]),
+      reasonForRequest: new FormControl('', [Validators.required]),
+      itemCondition: new FormControl('', [Validators.required]),
+      attachments: new FormControl('', []),
+      additionalComments: new FormControl(''),
+      // productData: new FormControl(''),
+      returnExchangeEntries: new FormControl(''),
+      productSearchInput: new FormControl(''),
+      selectedExchageProductControl: new FormControl(''),
+      productData: new FormControl(this.productData),
+      selectedProductData: new FormControl(''),
+      selectedProductSKU: new FormControl(''),
+      color: new FormControl(''),
+      dimention: new FormControl(''),
+      size: new FormControl(''),
+      vaKey: new FormControl(''),
+      vaMandatory: new FormControl(''),
+      selectedValueAdd: new FormControl(''),
+    },{
+      validators: this.fileSizeValidator()
+    });
+    this.itemsDetailsForm.addControl(this.itemFormId, this.itemForm);
+  }
+
+  getImageUrl(image: any) {
+    let media = this.mediaService.getMedia(image);
+    image = media?.src != undefined ? media?.src : '../../../../../assets/images/plp_no_image.png';
+    return image;
+  }
+
+  fileSizeValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const attachmentsControl = control.get('attachments');
+
+      var files = attachmentsControl?.value;
+      if (files != undefined) {
+        // if (files == "" || files?.length < 1) {
+        //   attachmentsControl?.setErrors({ fileNotSelected: true });
+        //   return { fileNotSelected: true };
+        // }
+        for (var i = 0; i < files.length; i++) {
+          if (this.getFileSize(files[i].size) > 30) {
+            attachmentsControl?.setErrors({ fileSizeExceeds: true });
+            return { fileSizeExceeds: true };
+          }
+          if (!this.isFileType(files[i])) {
+            attachmentsControl?.setErrors({ invalidFileType: true });
+            return { invalidFileType: true };
+          }
+        }
+      }
+
+      return null;
+    };
+  }
+
+  getFileSize(value: any) {
+    if (value) {
+      return value / (1024 * 1024);
+    }
+    return 0;
+  }
+
+  isFileType(item: any) {
+    if (this.accept.includes(item?.type)) {
+      return true;
+    }
+    if (item?.name?.toLowerCase().includes('.heic')) {
+      // Note: in crome, we are getting type as empty, so we are checking the ext of the file
+      return true;
+    }
+    return false;
+  }
+
+  // show Exchange div
+  showExchange(){
+    if(this.itemForm.controls['requestType'].value?.name.toLowerCase() == 'exchange'){
+       //Set conditional Validators when dropdown has EXCHNAGE value
+       if(this.itemForm?.controls['returnExchangeEntries']?.value == "" || this.itemForm?.controls['returnExchangeEntries']?.value == null ||
+       this.itemForm?.controls['size']?.value == "" || this.itemForm?.controls['size']?.value == null) {
+        this.addSkuValidation();
+        this.itemForm?.get('returnExchangeEntries')?.setValidators([Validators.required]);
+      } else {
+        this.clearSkuValidation();
+        this.itemForm?.get('returnExchangeEntries')?.clearValidators();
+        this.itemForm?.get('returnExchangeEntries')?.updateValueAndValidity();
+      }
+      // this.addSkuValidation();
+      // this.itemForm?.get('returnExchangeEntries')?.setValidators([Validators.required]);
+
+      this.showExchangeSection = true;
+      // Call Exchange Product API on Substeps
+      if(this.productData?.sizeExchangeFlag){ 
+        this.payload = {
+          ...this.payload,
+          searchText: this.baseProduct,
+          pageSize: "1",
+          selectedCode: this.itemForm?.controls['returnExchangeEntries']?.value ?? '',
+          baseProduct: this.productData?.skuNumber,
+          orderId : this.orderId,
+          entryNumber : this.productData?.entryNumber
+        }
+        this.store.dispatch(
+          new FetchExchangeProductAction(this.payload)
+        );
+        this.selectedProduct =  this.baseProduct
+      }else{
+        this.payload = {
+          ...this.payload,
+          searchText: "",
+          pageSize: "1",
+          selectedCode: this.itemForm?.controls['returnExchangeEntries']?.value ?? '',
+          baseProduct: this.productData?.skuNumber,
+          orderId: this.orderId,
+          entryNumber : this.productData?.entryNumber
+        }
+        this.store.dispatch(
+          new FetchExchangeProductAction(this.payload)
+        );
+      }
+      
+    }else{
+      //Clear Validators when dropdown has RETURN value
+      this.clearSkuValidation();
+      this.itemForm?.get('returnExchangeEntries')?.clearValidators();
+      this.itemForm?.get('returnExchangeEntries')?.updateValueAndValidity();
+    }
+  }
+
+  // form submit
+  onSubmit(){
+    
+    this.addVaValidation();
+
+    if(this.itemForm.valid ){
+      // set flag for review
+      if(this.itemForm.controls['requestType'].value?.name.toLowerCase() == 'exchange') {
+        // set selected prod data here
+        this.itemForm.controls['selectedProductSKU'].setValue(this.selectedExchageProduct?.skuNumber);
+        this.itemForm.controls['selectedProductData'].setValue(this.selectedExchageProduct);
+      } else {
+        this.itemForm.controls['selectedProductData'].setValue('');
+        this.itemForm.controls['selectedProductSKU'].setValue('');
+      }
+      const mainForm = this.itemsDetailsForm.getRawValue();
+      let isExchangeAvailable = false;
+      let isReturnAvailable   = false;
+      Object.keys(mainForm).forEach(function(key) {
+        if (key.includes('item')){
+          if(mainForm[key]['requestType']?.name?.toLowerCase() == 'exchange') {
+            isExchangeAvailable = true;
+          }
+          if(mainForm[key]['requestType']?.name?.toLowerCase() == 'return') {
+            isReturnAvailable = true;
+          }
+        }
+      });
+      this.itemsDetailsForm.controls['exchangeAvailable'].setValue(isExchangeAvailable);
+      this.itemsDetailsForm.controls['returnAvailable'].setValue(isReturnAvailable);
+        
+      this.itemsDetailsForm.controls[this.itemFormId].patchValue(this.itemForm);
+      let itemFormRawValue = this.itemForm.getRawValue();
+      if((this.itemForm.controls['requestType'].value?.name.toLowerCase() == 'return') && (itemFormRawValue?.itemCondition?.name?.toLowerCase() != 'unworn' && (itemFormRawValue?.reasonForRequest
+        ?.name?.toLowerCase() == 'change of mind' || itemFormRawValue?.reasonForRequest
+        ?.name?.toLowerCase() == 'incorrect item - not what i ordered')) && (this.productData?.packType.toLowerCase() == 'optional' || this.productData?.packType.toLowerCase() == 'replacement' || this.productData?.packType.toLowerCase() == 'self-purchase' || this.productData?.packType.toLowerCase() == 'self purchase')){
+          this.exchangeNotAllowedError=true;
+        }
+        else if((itemFormRawValue?.attachments?.length == 0 || itemFormRawValue?.attachments == '') && (this.itemForm.controls['requestType'].value?.name?.toLowerCase() == 'return') && (itemFormRawValue?.reasonForRequest
+          ?.name?.toLowerCase() == 'incorrect item - embroidery incorrect' || itemFormRawValue?.reasonForRequest
+          ?.name?.toLowerCase() == 'faulty - manufacturing/product fault' || itemFormRawValue?.reasonForRequest
+          ?.name?.toLowerCase() == 'faulty - damaged in transit' || itemFormRawValue?.reasonForRequest
+          ?.name?.toLowerCase() == 'faulty - soiled/marked when received') && (this.productData?.packType?.toLowerCase() == 'optional' || this.productData?.packType?.toLowerCase() == 'replacement' || this.productData?.packType?.toLowerCase() == 'self-purchase' || this.productData?.packType?.toLowerCase() == 'self purchase'))
+        {
+          this.globalFileErrorMessage = true;
+        }
+        else{
+          this.exchangeNotAllowedError=false;
+          this.globalFileErrorMessage = false;
+          this.callNext();
+        }
+    }
+    else {
+      this.showError = true;
+      if(this.itemForm.controls['requestType'].invalid){
+        this.dropRequestType.focus();
+      } else if(this.itemForm.controls['reasonForRequest'].invalid){
+        this.dropReasonForRequest.focus();
+      } else if(this.itemForm.controls['itemCondition'].invalid){
+        this.dropItemCondition.focus();
+      }
+    }
+  }
+  // valid flags
+  isInValidFormInput(name: string) {
+    var formcontrol = this.itemForm.controls[name];
+    return formcontrol.invalid && this.showError;
+  }
+
+  // custom error message 
+  getErrorMsg(name: string) { 
+    var formcontrol = this.itemForm.controls[name];
+    var error = formcontrol.errors;
+    if (error?.required) {
+      if(name == 'returnExchangeEntries') {
+        return 'Please select at least one item to return or exchange';
+      }
+      return 'This information is required.';
+    }
+    return '';
+  }
+
+  getItemImageUrl(imageList:any) {
+    let image : any;
+    if(imageList != undefined && imageList?.length > 0){
+      for(let i=0; i<imageList?.length; i++){
+        if(imageList[i]?.format == 'thumbnail'){
+          let media = this.mediaService.getMedia(imageList[i]);
+          image = media?.src != undefined ? media?.src : '../../../../../assets/images/plp_no_image.png';
+          break;
+        }
+      }
+    } else {
+      image = '../../../../../assets/images/plp_no_image.png';
+    }
+    return image;
+  }
+
+  navigateToFAQ(){
+    let FAQurl = this.router.serializeUrl(
+      this.router.createUrlTree(['/FAQ'])
+    );
+  
+    window.open(FAQurl, '_blank');
+  }
+
+  //next button call
+  callNext() {
+    let substepData;
+    if(this.itemsDetailsForm.getRawValue().exchangeAvailable) {
+      substepData = {
+        subStep: {
+          1: {
+            id: 1,
+            name: 'Return order shipping',
+          },
+          2: {
+            id: 2,
+            name: 'Exchange order shipping',
+          }
+        }
+      }
+    } else {
+      substepData = {}
+    }
+    
+    if(this.currentActiveItem == this.totalItemsLength) {
+     this.itemDetailsData = this.createItemsData(this.itemsDetailsForm.getRawValue());
+     let payload = this.createPayloadObj(this.itemDetailsData);
+     this.store.dispatch(new FetchReturnExchangePriceAction(payload))
+    }
+    
+    this.nextStep.emit({
+      action: 'NEXT',
+      stepId: 3,
+      data: substepData
+    });
+
+    // console.log(this.itemForm)
+  }
+
+  createPayloadObj(itemData: any){
+    let entries : any = [];
+    let finalPayload;
+    for(let element of itemData) {
+      let VAItem: any =  localStorage.getItem(this.selectedExchageProduct?.vaKey) ? JSON.parse(localStorage.getItem(this.selectedExchageProduct?.vaKey)  || '{}' ) : {};
+      let selectedValueAddData = JSON.stringify(VAItem?.valueAdd)
+      if(element?.requestType?.name?.toLowerCase() == 'return' || selectedValueAddData == undefined){
+        selectedValueAddData = ''
+      }
+      let data : any = { 
+        "entryNumber": element?.productData?.entryNumber, 
+        "productId": element?.productData?.skuNumber , 
+        "quantity": element?.productData?.quantity , 
+        "requestType": element?.requestType?.name , 
+        "reasonCode": element?.reasonForRequest?.name, 
+        "subCode": element?.itemCondition?.name , 
+        "pleaseSpecify": element?.productData?.specifyText , 
+        "additionalComments": element?.additionalComments , 
+        "alterNativeProduct": element?.selectedProductSKU ,
+        "selectedValueAdd" : selectedValueAddData
+      };
+      entries.push(data);
+    }
+    finalPayload = {
+      "returnAndExchangeEntries" : entries,
+      "orderNumber": this.orderNumber,
+    }
+    return finalPayload;
+  }
+
+  createItemsData(itemDetails: any) {
+    let itemArr: any[] = [];
+    Object.keys(itemDetails).forEach(function(key) {
+      if (key.includes('item')){
+        itemArr.push(itemDetails[key])
+      }
+    })
+    return itemArr;
+  }
+
+  launchSearchResult(searchVal: any) {
+    if (searchVal.length >= 0) {
+      this.payload = {
+        ...this.payload,
+        searchText: searchVal,
+        pageSize: "1",
+        selectedCode: this.itemForm?.controls['returnExchangeEntries']?.value ?? '',
+        baseProduct : this.productData?.skuNumber,
+        orderId : this.orderId,
+        entryNumber : this.productData?.entryNumber
+      }
+      this.store.dispatch(
+        new FetchExchangeProductAction(this.payload)
+      );
+    } 
+  }
+
+  updateSearchTerm(searchVal:any){
+    this.selectedSearchterm = searchVal
+  }
+
+  clearSearchFunction() {
+    this.itemForm?.get('productSearchInput')?.reset()
+    this.payload = {
+      ...this.payload,
+      searchText: "",
+      pageSize: "1",
+      selectedCode: "",
+      baseProduct : this.productData?.skuNumber,
+      orderId : this.orderId,
+      entryNumber : this.productData?.entryNumber
+    }
+    this.store.dispatch(
+      new FetchExchangeProductAction(this.payload)
+    );
+    this.selectedSearchterm = '';
+    this.searchTerm = '';
+  }
+
+  selectProduct(event:any){
+    console.log(event)
+    // this.selectedProduct = event.value
+    this.resetItemFormSkus();
+    this.cd.markForCheck();
+  }
+
+  resetItemFormSkus(){
+    if(this.itemForm) {
+      this.itemForm.controls['color'].setValue('');
+      this.itemForm.controls['dimention'].setValue('');
+      this.itemForm.controls['size'].setValue('');
+      this.addSkuValidation();
+    }
+  }
+
+  showMore(event:any) {
+   this.counter++;
+   //console.log(this.counter)
+   this.payload = {
+    ...this.payload,
+    searchText: "",
+    pageSize: this.counter.toString(),
+    selectedCode: this.itemForm?.controls['returnExchangeEntries']?.value ?? '',
+    baseProduct : this.productData?.skuNumber,
+    orderId : this.orderId,
+    entryNumber : this.productData?.entryNumber
+  }
+  this.store.dispatch(
+    new FetchExchangeProductAction(this.payload)
+  );
+  }
+
+  getProduct(product: any) {
+    if (product && product?.name) {
+      return {
+        ...product,
+        name: product?.name?.replaceAll('/', ''),
+      };
+    }
+    return product;
+  }
+
+  addVaValidation(){
+    if(this.productIntroComponent != undefined)
+      this.productIntroComponent.showMandatoryVAError();
+      
+    if(this.itemForm.controls['vaMandatory'].value && this.productIntroComponent != undefined){
+      this.productIntroComponent.showMandatoryVAError();
+      this.itemForm?.get('selectedValueAdd')?.setValidators([Validators.required]);
+      this.itemForm?.get('selectedValueAdd')?.updateValueAndValidity();
+
+      let VAItem: any =  localStorage.getItem(this.itemForm.controls['vaKey'].value) ? JSON.parse(localStorage.getItem(this.itemForm.controls['vaKey'].value)  || '{}' ) : {};
+      let selectedValueAddData = JSON.stringify(VAItem?.valueAdd)
+      if(selectedValueAddData == undefined){
+        this.itemForm.controls['selectedValueAdd'].setValue('');
+      }else{
+        this.itemForm.controls['selectedValueAdd'].setValue(VAItem);
+      }
+    } else {
+      this.itemForm?.get('selectedValueAdd')?.clearValidators();
+      this.itemForm?.get('selectedValueAdd')?.updateValueAndValidity();
+    }
+  }
+
+  // check how many size available
+  sizeAvailablesCheck(event:any){
+    this.exchangeSizeCheckResp = true;
+
+    if(event != undefined && event == true ){
+      this.exchangeSizeShowError = false;
+    } else {
+      this.exchangeSizeShowError = true;
+    }
+    this.cd.markForCheck()
+  }
+
+  getSelectedForm(event:any){
+
+    this.itemForm.controls['color'].setValue(event.colour);
+    this.itemForm.controls['dimention'].setValue(event.dimention);
+    this.itemForm.controls['size'].setValue(event.size);
+    this.itemForm.controls['vaKey'].setValue(event?.vaKey);
+    this.itemForm.controls['vaMandatory'].setValue(event?.vaMandatory);
+    let price = event?.price;
+    let priceWithoutSymbol = price?.replace(/\$/g, '');
+
+    this.selectedExchageProduct = {
+          skuNumber: event?.skuNumber ?? '',
+          colour: event?.colour?.code?.name ?? '',
+          price : Number(priceWithoutSymbol) ?? '',
+          dimention: event?.dimention?.code?.name ?? '',
+          product: {
+            images: event?.colour?.images ?? [],
+            name: event?.name ?? '',
+          },
+          size: event?.size?.code?.code ?? '',
+          vaKey: event?.vaKey ?? '',
+          vaMandatory: event?.vaMandatory ?? false,
+          packName: this.productData?.packName,
+          packType: this.productData?.packType,
+          quantity: this.productData?.quantity,
+          selectedVaOption: event.selectedVaOption,
+          selectedSizeVariant: event.size      
+      };
+      
+    let currentItemId = this.item;
+    this.removeSelectionIDs = this.removeSelectionIDs.filter(item => item !== currentItemId)
+    //console.log("this.removeSelectionIDs", this.removeSelectionIDs)
+
+    this.cd.markForCheck();
+    console.log(this.selectedExchageProduct)
+  }
+
+  // prev step
+  goPrevStep() {
+    this.prevStep.emit({
+      action: 'PREV',
+      data: {},
+    });
+  }
+  showHideDetailData(i:any){
+    this.showData[i] = !this.showData[i]
+    this.showHideDetail[i] = !this.showHideDetail[i]
+  }
+  ngOnDestroy(){
+    this.itemSub.unsubscribe();
+  }
+
+
+}
