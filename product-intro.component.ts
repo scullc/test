@@ -695,18 +695,17 @@ export class ProductIntroComponent
     this.showLoader = true;
     if (
       (this.products?.packType?.toLowerCase() == 'self-purchase' &&
-      this.pdpForm.get('lengthandfit')?.valid &&  
+      (!this.pdpForm.controls['lengthandfit'] || this.pdpForm.get('lengthandfit')?.valid) &&  
       this.pdpForm.get('sizes')?.valid && 
       !this.showMandatoryCustomizationError)
       ||
-      (this.pdpForm.get('lengthandfit')?.valid &&  
+      (!this.pdpForm.controls['lengthandfit'] || this.pdpForm.get('lengthandfit')?.valid) &&  
       this.pdpForm.get('sizes')?.valid &&  
-      //this.pdpForm.get('reasonForReplacement')?.value != '' && // as added conditional validation
       this.pdpForm.get('reasonForReplacement')?.valid &&
       this.pdpForm.get('reasonForReplacementComments')?.valid &&
       this.pdpForm.get('attachments')?.valid &&
       !this.showMandatoryCustomizationError)
-    ) {
+      {
       let payload: any = {
         code: '',
         quantity: this.pdpForm.get('quantity')?.value,
