@@ -142,6 +142,7 @@ export class ProductIntroComponent
   errorMessage: any;
   errorSubject: any;
   showErrorDisplay: boolean = false;
+  isLengthAndFitRequired: boolean;
 
   pdpForm = new FormGroup(
     {
@@ -410,11 +411,6 @@ export class ProductIntroComponent
       })
     }
     
-  }
-
-  get lengthAndFitError() {
-    const control = this.pdpForm.get('lengthandfit');
-    return control?.hasError('required') && control?.touched ? 'Please select a fitting type' : null;
   }
 
   removeQueryParamsAfterNavigation(): void {
@@ -699,18 +695,21 @@ export class ProductIntroComponent
     this.showMandatoryVAError();
     this.showLoader = true;
     if (
-      (this.products?.packType?.toLowerCase() == 'self-purchase' &&
-      this.pdpForm.get('lengthandfit')?.valid &&  
-      this.pdpForm.get('sizes')?.valid && 
-      !this.showMandatoryCustomizationError)
+      (
+        this.products?.packType?.toLowerCase() == 'self-purchase' &&
+        (!this.isLengthAndFitRequired || this.pdpForm.get('lengthandfit')?.valid) &&
+        this.pdpForm.get('sizes')?.valid &&  
+        !this.showMandatoryCustomizationError
+      )
       ||
-      (this.pdpForm.get('lengthandfit')?.valid &&  
-      this.pdpForm.get('sizes')?.valid &&  
-      //this.pdpForm.get('reasonForReplacement')?.value != '' && // as added conditional validation
-      this.pdpForm.get('reasonForReplacement')?.valid &&
-      this.pdpForm.get('reasonForReplacementComments')?.valid &&
-      this.pdpForm.get('attachments')?.valid &&
-      !this.showMandatoryCustomizationError)
+      (
+        this.pdpForm.get('lengthandfit')?.valid &&  
+        this.pdpForm.get('sizes')?.valid &&  
+        this.pdpForm.get('reasonForReplacement')?.valid &&
+        this.pdpForm.get('reasonForReplacementComments')?.valid &&
+        this.pdpForm.get('attachments')?.valid &&
+        !this.showMandatoryCustomizationError
+      )
     ) {
       let payload: any = {
         code: '',
@@ -1134,11 +1133,16 @@ export class ProductIntroComponent
     this.selectedColorVariant = this.products.variants.filter(
       (it: any) => it.code.code == event.code
     )[0];
+    this.isLengthAndFitRequired = this.selectedColorVariant?.variants?.length > 0;
     this.selectedFitVariant = this.selectedColorVariant?.variants[0];
     this.sizes = this.getSizes()
     this.colorBoolean = false
     this.pdpForm.controls['color'].setValue(this.selectedColorVariant.code.code);
-    this.pdpForm.controls['lengthandfit'].setValue(null);
+    this.pdpForm.controls['lengthandfit'].valueChanges.subscribe(value => {
+      if (value) {
+        this.pdpForm.controls['lengthandfit'].setValue(this.selectedFitVariant?.code?.code);
+      }
+    });
 	  this.pdpService.colorImages.next(this.selectedColorVariant);
     this.getCustomizationAvailability()
     return true
