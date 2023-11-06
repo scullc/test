@@ -103,7 +103,7 @@ export class ProductIntroComponent
     'image/heic',
   ];
 
-  dimensionSortOrder = { R: 0, L: 1, S: 2 };
+  dimensionSortOrder: { [key: string]: number } = { R: 0, L: 1, S: 2 };
 
   dimentions = [
     { code: "S", name: "Short or Stout" },
@@ -260,8 +260,9 @@ export class ProductIntroComponent
         return this.dimensionSortOrder[a.code as string] - this.dimensionSortOrder[b.code as string];
       });
       console.log('Sorted dimentions:', this.dimentions);
-    }
-    
+    } 
+  
+
     this.routerSubscription = this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
         setTimeout(
