@@ -102,6 +102,7 @@ export class ProductIntroComponent
     'image/gif',
     'image/heic',
   ];
+  dimensionSortOrder: { [key: string]: number } = { R: 0, L: 1, S: 2 };
   // products: any;
   // @ViewChild('toast') toast: WwgToastComponent;
   @Input() getProductCode: any;
@@ -584,8 +585,9 @@ export class ProductIntroComponent
     }
     this.setCustomValidators()
   }
-
+ 
   initExchangeSelection(){
+    this.dimentions.sort(this.sortByCustomOrder.bind(this));
     var color = this.itemForm.controls['color'].value;
     var dimention = this.itemForm.controls['dimention'].value;
     var size = this.itemForm.controls['size'].value;
@@ -619,8 +621,15 @@ export class ProductIntroComponent
     //emmit size array
     let availableSize = !this.isEmptyColorVariant() && !this.isEmptySizeVariant();
     this.sizeAvailables.emit(availableSize)
-    
-    
+  }
+
+  sortByCustomOrder(a: { code: { code: string | number; }; }, b: { code: { code: string | number; }; }) {
+    if (!a.code || !this.dimensionSortOrder[a.code.code]) return 1;
+    if (!b.code || !this.dimensionSortOrder[b.code.code]) return -1;
+    if (this.dimensionSortOrder[a.code.code] < this.dimensionSortOrder[b.code.code]) return -1;
+    if (this.dimensionSortOrder[a.code.code] > this.dimensionSortOrder[b.code.code]) return 1;
+    console.log(a.code, b.code);
+    return 0;
   }
 
   isColorSelected(color: any, i:any){
