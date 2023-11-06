@@ -243,6 +243,7 @@ export class ProductIntroComponent
   }
 
   ngOnInit(): void {
+    this.dimentions.sort(this.sortByCustomOrder.bind(this));
     this.routerSubscription = this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
         setTimeout(
@@ -587,7 +588,8 @@ export class ProductIntroComponent
   }
  
   initExchangeSelection(){
-    this.dimentions.sort(this.sortByCustomOrder.bind(this));
+  
+    console.log('Sorted dimentions:', this.dimentions);
     var color = this.itemForm.controls['color'].value;
     var dimention = this.itemForm.controls['dimention'].value;
     var size = this.itemForm.controls['size'].value;
@@ -624,6 +626,7 @@ export class ProductIntroComponent
   }
 
   sortByCustomOrder(a: { code: { code: string | number; }; }, b: { code: { code: string | number; }; }) {
+    console.log('a:', a, 'b:', b, 'dimensionSortOrder:', this.dimensionSortOrder);
     if (!a.code || !this.dimensionSortOrder[a.code.code]) return 1;
     if (!b.code || !this.dimensionSortOrder[b.code.code]) return -1;
     if (this.dimensionSortOrder[a.code.code] < this.dimensionSortOrder[b.code.code]) return -1;
