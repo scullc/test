@@ -48,7 +48,8 @@ import {
   selectProductDetail,
   selectProductSizeGuideDetail,
   addToBundleSummaryData,
-  selectVAData
+  selectVAData,
+  bulkAddToCart
 } from 'src/app/_ngrx/selectors/global.selectors';
 // import { WwgToastComponent } from 'src/app/shared/wwg-toast/wwg-toast.component';
 import { CartComponent } from '../../cart/cart-List/cart.component';
@@ -68,16 +69,19 @@ import {
   LoadVASuccess,
   SaveProductDetails,
   FetchBundleSummaryAction,
-  LoadAddToBundleSummaryAction
+  LoadAddToBundleSummaryAction,
+  LoadBulkAddToCart
 } from 'src/app/_ngrx/actions/global.actions';
 import { HttpEventType } from '@angular/common/http';
 import { WwgFileUploadComponent } from 'src/app/shared/wwg-file-upload/wwg-file-upload.component';
 import { MatSelectChange } from '@angular/material/select';
 import { SizeguideComponent } from '../sizeguide/sizeguide.component';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { PacksServiceService } from '../../packs/packs-service.service';
 import { Location } from '@angular/common';
+import { BulkOrderModalComponent } from '../bulk-order-modal/bulk-order-modal.component';
 import { errMsg } from 'src/app/shared/base_en_config';
+declare let $: any;
 
 @Component({
   selector: 'app-product-intro',
@@ -116,7 +120,9 @@ export class ProductIntroComponent
   @Output() sizeAvailables = new EventEmitter<any>();
   @Input() exchangePreDimention: any;
   @Input() sizeOnlyFlag: boolean;
-  
+  @Input() originalProdCode: any;
+  @Input() isSubstituteEntry: boolean;
+
   @ViewChild('fileUpload') fileUpload: WwgFileUploadComponent;
   replacement: any;
   quantity = 1;
@@ -202,12 +208,15 @@ export class ProductIntroComponent
   selectVADataSub : any;
   mandatoryVA : boolean = false;
   AvailableVaOptions : any = {};
+  bulkOrderRole: boolean = false;
 
   defaultShowPrice : any;
   isWearer: boolean;
+  bulkAddToCartSub: any;
   disablePackCTA: boolean = false;
-
+ 
   mandatoryVAEmptyRule : boolean = false;
+  routerSubscription: any;
   constructor(
     protected fb: FormBuilder,
     modalService: ModalService,
@@ -233,6 +242,31 @@ export class ProductIntroComponent
   }
 
   ngOnInit(): void {
+    this.routerSubscription = this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        setTimeout(
+          ()=>{
+            window.scrollTo(0, 0);
+         }, 400
+        );
+      }
+    });
+    this.bulkAddToCartSub = this.store.select(bulkAddToCart).subscribe((res)=>{
+      if(Object.keys(res).length>0){
+        this.handleBulkAddToCartResp(res)
+      }
+      this.cd.markForCheck();
+    })
+    if(localStorage.getItem('selectedUser') != null) {
+      let userDetail = JSON.parse(localStorage?.selectedUser);
+      if(userDetail?.isBulkOrder){
+        this.bulkOrderRole = true
+      } else {
+        this.bulkOrderRole = false;
+      }
+    } else {
+      this.bulkOrderRole = false
+    }
     this.store.select(fileProgress).subscribe((res: any) => {
       this.progress = res;
       this.cd.markForCheck();
@@ -269,14 +303,24 @@ export class ProductIntroComponent
         // })
 
     }else if(this.getProductCode != undefined){
-      let payload = {
-
-        productCode: this.sizeOnlyFlag ? this.getOriginalSKU : this.getProductCode,
-        roleName: this.getOriginalRoleName,
-        packType: this.getOriginalPackType,
-        selectedPackID: this.getOriginalPackID,
-        sizeOnlyFlag: this.sizeOnlyFlag
-      }
+      let payload;
+      if(this.sizeOnlyFlag && this.isSubstituteEntry) {
+        payload = {
+          productCode: this.originalProdCode,
+          roleName: this.getOriginalRoleName,
+          packType: this.getOriginalPackType,
+          selectedPackID: this.getOriginalPackID,
+          sizeOnlyFlag: this.sizeOnlyFlag
+        }
+      } else {
+        payload = {
+          productCode: this.sizeOnlyFlag ? this.getOriginalSKU : this.getProductCode,
+          roleName: this.getOriginalRoleName,
+          packType: this.getOriginalPackType,
+          selectedPackID: this.getOriginalPackID,
+          sizeOnlyFlag: this.sizeOnlyFlag
+        }
+      } 
       this.store.dispatch(new SaveProductDetails({}))
       this.store.dispatch(new FetchProductDetails(payload))
       this.getProductResponse = this.store.select(selectProductDetail).subscribe((res)=>{
@@ -699,13 +743,13 @@ export class ProductIntroComponent
       this.pdpForm.get('sizes')?.valid && 
       !this.showMandatoryCustomizationError)
       ||
-      (!this.pdpForm.controls['lengthandfit'] || this.pdpForm.get('lengthandfit')?.valid) &&  
-      this.pdpForm.get('sizes')?.valid &&  
+
+      (this.pdpForm.get('sizes')?.valid &&  
       this.pdpForm.get('reasonForReplacement')?.valid &&
       this.pdpForm.get('reasonForReplacementComments')?.valid &&
       this.pdpForm.get('attachments')?.valid &&
       !this.showMandatoryCustomizationError)
-      {
+    ) {
       let payload: any = {
         code: '',
         quantity: this.pdpForm.get('quantity')?.value,
@@ -854,6 +898,10 @@ export class ProductIntroComponent
         },
         panelClass: ['animate__animated', 'animate__slideInRight', 'cart'],
       });
+       dialogRef.afterClosed().subscribe(() => {
+        $('html').removeClass('cdk-global-scrollblock'); 
+        $('html').removeAttr('style');
+    });
     } else {
       const dialogRef = this.dialog.open(CartComponent, {
         width: '531px',
@@ -864,6 +912,10 @@ export class ProductIntroComponent
         },
         panelClass: ['animate__animated', 'animate__slideInRight', 'cart'],
       });
+      dialogRef.afterClosed().subscribe(() => {
+        $('html').removeClass('cdk-global-scrollblock'); 
+        $('html').removeAttr('style');
+    });
     }
   }
 
@@ -1133,7 +1185,6 @@ export class ProductIntroComponent
     this.colorBoolean = false
     this.pdpForm.controls['color'].setValue(this.selectedColorVariant.code.code);
     this.pdpForm.controls['lengthandfit'].valueChanges.subscribe(value => {
-      console.log('Value changed:', value);  // Log the new value to the console
       if (value) {  // this condition checks if the user has selected a value
         this.pdpForm.controls['lengthandfit'].setValue(this.selectedFitVariant?.code?.code);
       }
@@ -1225,11 +1276,11 @@ export class ProductIntroComponent
       });
     } else {
       dialogRef = this.dialog.open(CustomiseProductModalComponent, {
-        width: '620px',
+        width: '900px',
         height: '100%',
         position: dialogPosition,
         data: this.AvailableVaOptions ? {'va': this.AvailableVaOptions,'isExchange': this.exchange, 'hidePrice': showPrice} : {},
-        panelClass: ['animate__animated', 'animate__slideInRight'],
+        panelClass: ['animate__animated', 'animate__slideInRight', 'customiseProductModal', 'modalWidth'],
       });
     }
     dialogRef.afterClosed().subscribe((res) => {
@@ -1427,6 +1478,51 @@ export class ProductIntroComponent
     return price;    
   }
 
+  bulkOrderModal() {
+    //console.log("this.products", this.products)
+    const dialogPosition: DialogPosition = {
+      top: '0px',
+      right: '0px',
+    };
+    if (this.innerWidth <= 768) {
+      const dialogRef = this.dialog.open(BulkOrderModalComponent, {
+        minWidth: '100%',
+        height: '100%',
+        position: dialogPosition,
+        data: {
+          productCode: this.products?.code,
+          productName: this.products?.name,
+          itemtData: this.products?.variants,
+          itemSizes: this.sizes,
+          packId: this.products?.selectedPackID,
+          packType: this.products?.packType,
+          roleName: this.products?.roleId,
+          isEmptyFitVariant: this.isEmptyFitVariant(),
+          mainProduct: this.products
+        },
+        panelClass: ['animate__animated'],
+      });
+    } else {
+      const dialogRef = this.dialog.open(BulkOrderModalComponent, {
+        width: '900px',
+        height: '100%',
+        position: dialogPosition,
+        data: {
+          mainProduct: this.products,
+          productCode: this.products?.code,
+          productName: this.products?.name,
+          itemtData: this.products?.variants,
+          itemSizes: this.sizes,
+          packId: this.products?.selectedPackID,
+          packType: this.products?.packType,
+          roleName: this.products?.roleId,
+          isEmptyFitVariant: this.isEmptyFitVariant()
+        },
+        panelClass: ['animate__animated', 'animate__slideInRight','modalWidth'],
+      });
+    }
+  }
+
   checkDefineValue(chkValue:any){
     if(chkValue!=undefined){
       return chkValue;
@@ -1438,11 +1534,27 @@ export class ProductIntroComponent
   ngOnDestroy(): void {
     this.store.dispatch(new LoadVASuccess({}));
     this.pdpService.colorImages.next({});
+    this.routerSubscription.unsubscribe();
     if(this.getProductResponse!=undefined) {
       this.getProductResponse.unsubscribe()
       this.selectVADataSub.unsubscribe()
       this.store.dispatch(new SaveProductDetails({}))
       this.store.dispatch(new LoadAddToBundleSummaryAction({}))
+    }
+  }
+
+  handleBulkAddToCartResp(res: any){
+    if(res.error){
+      this.store.dispatch(new GlobalFailureToastMsgAction(errMsg.er48));
+    } else {
+      this.pdpService.getCart();
+      this.dialog.closeAll();
+      this.openCart();
+      setTimeout(()=>{
+        $('html').addClass('cdk-global-scrollblock'); 
+        $('html').css({left: 0, top:0});
+        }, 200);
+      this.store.dispatch(new LoadBulkAddToCart({}));
     }
   }
 
