@@ -102,15 +102,6 @@ export class ProductIntroComponent
     'image/gif',
     'image/heic',
   ];
-
-  dimensionSortOrder: { [key: string]: number } = { R: 0, L: 1, S: 2 };
-
-  dimentions = [
-    { code: "S", name: "Short or Stout" },
-    { code: "R", name: "Regular" },
-    { code: "L", name: "Long" }
-  ];
- 
   // products: any;
   // @ViewChild('toast') toast: WwgToastComponent;
   @Input() getProductCode: any;
@@ -249,20 +240,8 @@ export class ProductIntroComponent
   ) {
     super(modalService, currentProductService, cd, activeCartService);
   }
-  
 
   ngOnInit(): void {
-
-    this.sortDimentions();
-    
-    sortDimentions(): void {
-      this.dimentions.sort((a: { code: string | number; }, b: { code: string | number; }) => {
-        return this.dimensionSortOrder[a.code as string] - this.dimensionSortOrder[b.code as string];
-      });
-      console.log('Sorted dimentions:', this.dimentions);
-    } 
-  
-
     this.routerSubscription = this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
         setTimeout(
@@ -437,7 +416,6 @@ export class ProductIntroComponent
       this.cd.markForCheck();
     })
   }
-
   event(){
     this.slideout = !this.slideout
     // const dialogPosition: DialogPosition = {
@@ -606,7 +584,7 @@ export class ProductIntroComponent
     }
     this.setCustomValidators()
   }
- 
+
   initExchangeSelection(){
     var color = this.itemForm.controls['color'].value;
     var dimention = this.itemForm.controls['dimention'].value;
@@ -641,6 +619,8 @@ export class ProductIntroComponent
     //emmit size array
     let availableSize = !this.isEmptyColorVariant() && !this.isEmptySizeVariant();
     this.sizeAvailables.emit(availableSize)
+    
+    
   }
 
   isColorSelected(color: any, i:any){
@@ -977,7 +957,6 @@ export class ProductIntroComponent
   }
 
   get dimentions() {
-    console.log('Getting dimentions, selectedColorVariant:', this.selectedColorVariant, 'products:', this.products);
     if (this.selectedColorVariant) {
       let dimentionVariant = this.products?.variants?.filter((it: any) =>
         it?.code?.code != undefined
@@ -1654,7 +1633,3 @@ interface Code {
   code: string;
   name: string;
 }
-function sortDimentions() {
-  throw new Error('Function not implemented.');
-}
-
