@@ -734,21 +734,31 @@ export class ProductIntroComponent
   }
 
   pdpCart() {
+    console.log("Form Values:", this.pdpForm.value);
+    console.log("Form Validity:", this.pdpForm.valid);
+    console.log("Length and Fit Validity:", this.pdpForm.get('lengthandfit')?.valid);
+    console.log("Sizes Validity:", this.pdpForm.get('sizes')?.valid);
+  
     this.showError = true;
     this.showMandatoryVAError();
     this.showLoader = true;
+  
+    // Check if lengthandfit field is present and non-empty, and is valid
+    const isLengthAndFitApplicable = this.pdpForm.controls['lengthandfit'] !== undefined;
+    const isLengthAndFitValid = isLengthAndFitApplicable ? (this.pdpForm.value.lengthandfit !== '' && this.pdpForm.get('lengthandfit')?.valid) : true;
+  
     if (
       (this.products?.packType?.toLowerCase() == 'self-purchase' &&
-      (!this.pdpForm.controls['lengthandfit'] || this.pdpForm.get('lengthandfit')?.valid) &&  
-      this.pdpForm.get('sizes')?.valid && 
-      !this.showMandatoryCustomizationError)
+       isLengthAndFitValid &&  
+       this.pdpForm.get('sizes')?.valid && 
+       !this.showMandatoryCustomizationError)
       ||
-
       (this.pdpForm.get('sizes')?.valid &&  
-      this.pdpForm.get('reasonForReplacement')?.valid &&
-      this.pdpForm.get('reasonForReplacementComments')?.valid &&
-      this.pdpForm.get('attachments')?.valid &&
-      !this.showMandatoryCustomizationError)
+       isLengthAndFitValid &&
+       this.pdpForm.get('reasonForReplacement')?.valid &&
+       this.pdpForm.get('reasonForReplacementComments')?.valid &&
+       this.pdpForm.get('attachments')?.valid &&
+       !this.showMandatoryCustomizationError)
     ) {
       let payload: any = {
         code: '',
